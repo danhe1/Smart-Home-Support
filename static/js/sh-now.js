@@ -16,18 +16,87 @@ $(function() {
 	var time_timer;
     var weather_timer;
 
+    var timezone = null;
+    var utc_offset = null;
+
     var tb; //token for buzzer
     var tg; //token for gas
     var tc; //token for car
     var tm; //token for motion
 
-    $.sh = {};
+    $.sh = {
+        init: function() {
+            //set initial timezone to Cookie
+            console.log("load timezone...");
+            if (!getTimezone()) {
+                setTimezone(moment.tz.guess());
+                console.log('set timezone in cookie: ' + getCookie('timezone'));
+            }
+            makeTimezoneSelect();
+        }
+    };
 
-	window.onbeforeunload = function() {
-		console.log("Leaving the page...")
-		if(window.socket !=null)window.socket.close();
+    function getTimezone() {
+        var tz = getCookie('timezone');
+        var zones = moment.tz.names();
+        if(zones.indexOf(tz) > 0) {
+            console.log('get timezone in cookie: ' + tz);
+            timezone = tz;
+            utc_offset = moment.tz(timezone).utcOffset() / 60;
+            return true;
+        }
+        else return false;
+    };
+
+    function setTimezone(tz) {
+        timezone = tz;
+        createCookie('timezone', timezone, 5);
+        utc_offset = moment.tz(timezone).utcOffset()/60;
+        console.log('current offset: ' + utc_offset);
+    };
+
+    function makeTimezoneSelect() {
+        // reduce the timezone list size to 220.
+        var cities = Object.keys(moment.tz._zones)
+            .map(function(k) { if(typeof moment.tz._zones[k] === 'string') return moment.tz._zones[k].split('|')[0]; else return moment.tz._zones[k].name;})
+            .filter(function(z) { return z.indexOf('/') >= 0; });
+
+        var ordered_cities = [];
+        var i = 0 ;
+        for(var key in cities) {
+            ordered_cities.push({
+              id: i.toString(),
+              text: '(GMT ' + moment.tz(cities[key]).format('Z') + ') ' + cities[key],
+              offset: moment.tz(cities[key]).format('Z')
+            });
+            i++;
+        }
+        ordered_cities.sort(function(a, b){
+            return parseInt(a.offset.replace(":", ""), 10) - parseInt(b.offset.replace(":", ""), 10);
+        });
+
+        $('#timezone').select2({
+            data: ordered_cities,
+            tags: "true",
+            width: "300px",
+            placeholder: '(GMT ' + moment.tz(timezone).format('Z') + ') ' + timezone,
+        });
+
+        $('#timezone').change(function() {
+            var theSelection = $('#timezone option:selected').text();
+            console.log('selected: ' + theSelection.split(') ')[1]);
+            setTimezone(theSelection.split(') ')[1]);
+            window.location.reload();
+        });
     }
 
+	window.onbeforeunload = function() {
+		console.log("Leaving the page...");
+		if(window.socket !=null)window.socket.close();
+    };
+
+	window.onload = function() {
+    };
 
 	$.sh.now = {
 		register_actions: function(){
@@ -45,11 +114,11 @@ $(function() {
                 if(temp.length == 0) return;
 				if (unit == "C") {
 					unit = "F";
-					temp = convertToF(temp);
+					temp = convertToF(temp, 0);
 				}
 				else if (unit == "F") {
 					unit = "C";
-					temp = convertToC(temp);
+					temp = convertToC(temp, 0);
 				}
 				console.log('unit: ' + unit + ' temp: '+ temp);
 				$(this).children("span:first").html(unit);
@@ -88,7 +157,6 @@ $(function() {
 				  </div>\
 				</div>', time))
 			}
-
 		},
 		update_motion_alert: function(time){
 			if($(".mdl-card__title h6:contains('MOTION SENSOR')").length > 0){
@@ -278,19 +346,19 @@ $(function() {
                     $.each(sensors['alert'], function (key, value) {
                         switch (key) {
                             case 'buzzer':
-                                $.sh.now.update_buzzer_alert(getTime(value));
+                                $.sh.now.update_buzzer_alert(getTime(value, utc_offset));
                                 tb = value;
                                 break;
                             case 'motion':
-                                $.sh.now.update_motion_alert(getTime(value));
+                                $.sh.now.update_motion_alert(getTime(value, utc_offset));
                                 tm = value;
                                 break;
                             case 'gas':
-                                $.sh.now.update_gas_alert(getTime(value));
+                                $.sh.now.update_gas_alert(getTime(value, utc_offset));
                                 tg = value;
                                 break;
 							case 'button':
-                                $.sh.now.update_car_alert(getTime(value));
+                                $.sh.now.update_car_alert(getTime(value, utc_offset));
                                 tc = value;
                                 break;
                             default:
@@ -316,7 +384,18 @@ $(function() {
                         switch (key) {
                             case 'temperature':
                                 //$.sh.now.update_sensor_data('HOUSE TEMPERATURE', convertToF(parseFloat(value)).toFixed(1).toString() + '°F');
-								$.sh.now.update_sensor_data('HOUSE TEMPERATURE', parseFloat(value).toFixed(1).toString() + '°C');
+                                var house_temp = null;
+                                var temp_unit = "°";
+                                //console.log('index: ' + timezone.indexOf("America") + " tz: " + timezone);
+                                if(timezone.indexOf('America') == 0 || timezone.indexOf('US') == 0) {
+                                    house_temp = convertToF(parseFloat(value), 1);
+                                    temp_unit += "F";
+                                }
+                                else {
+                                    house_temp = parseFloat(value).toFixed(1);
+                                    temp_unit += "C";
+                                }
+								$.sh.now.update_sensor_data('HOUSE TEMPERATURE', house_temp.toString() + temp_unit);
                                 break;
                             case 'solar':
                                 $.sh.now.update_sensor_data('SOLAR PANEL TILT', value + '%');
@@ -358,7 +437,6 @@ $(function() {
 			now_timer = setInterval($.sh.now.update_portal, 3000);
             // update weather every 1 hour
             weather_timer = setInterval(updateWeather(), 3600*1000);
-
 		}
 	};
 
@@ -485,12 +563,24 @@ $(function() {
     	},
     	sendrequest: function () {
 			if(window.panel != 2) return;
-			window.socket.emit('my data', {data: "temperature"});
-			window.socket.emit('my data', {data: "gas"});
-			window.socket.emit('my data', {data: "illuminance"});
-			window.socket.emit('my data', {data: "buzzer"});
+            var now = moment();
+			var full_format = "YYYY-MM-DD HH:mm:ss";
+            var start = now.format("YYYY-MM-DD") + " 00:00:00";
+            var end = now.format("YYYY-MM-DD") + " 23:59:59";
+			var utc_start_time = moment(start).utc().format(full_format);
+            var utc_end_time = moment(end).utc().format(full_format);
+            console.log("start and end: " + start + " " + end);
+            console.log("utc start and end: " + utc_start_time + " " + utc_end_time);
+			window.socket.emit('my data', {data: "temperature", date: [utc_start_time, utc_end_time]});
+			window.socket.emit('my data', {data: "gas", date: [utc_start_time, utc_end_time]});
+			window.socket.emit('my data', {data: "illuminance", date: [utc_start_time, utc_end_time]});
+			window.socket.emit('my data', {data: "buzzer", date: [utc_start_time, utc_end_time]});
     	},
     	socketinit: function () {
+            var now = moment.utc();
+            var hour = getHour(now, utc_offset);
+            //var hour = moment(time).format();
+            console.log('utc offset: ' + utc_offset + ' hour:' + hour);
 			namespace = '/index'; // change to an empty string to use the global namespace
 			var day = ['0', '1',
 						'2', '3', '4',
@@ -523,6 +613,7 @@ $(function() {
 			socket.on( 'my temperature', function (msg ) {
 				console.log( "temperature");
 				var temp_data = msg.data;
+                console.log(temp_data);
 				if(temp_data.length==0)
 				{
 					var content = "<div style='text-align:center'><label>There is no data today.</label></div>";
@@ -530,26 +621,41 @@ $(function() {
 				}
 				else
 				{
-					var average_temp = 0,count=0;
+					var chart_data = Array.apply(null, Array(hour+1)).map(Number.prototype.valueOf,0);
+                    var average_temp = 0;
+                    var local_hour;
+                    var is_Celsius = true;
+                    var temp_unit = "°";
+                    console.log('index: ' + timezone.indexOf("US") + " tz: " + timezone);
+                    if(timezone.indexOf('America') == 0 || timezone.indexOf('US') == 0) {
+                        is_Celsius = false;
+                        temp_unit += "F";
+                    }
+                    else temp_unit += "C";
+
 					for (var i =0;i<temp_data.length;i++)
 					{
-						if(temp_data[i]!=0)
-						{
-							temp_data[i] = parseFloat(temp_data[i].toFixed(2));
-							count++;
-						}
-						average_temp += parseFloat(temp_data[i]);
+                        local_hour = utc_offset+temp_data[i][1];
+                        if(local_hour < 0)
+                            local_hour += 24;
+                        //console.log('local hour: ' + local_hour);
+                        console.log("is: " + is_Celsius + " c: " + parseFloat(temp_data[i][0].toFixed(2)) + " f:" + convertToF(parseFloat(temp_data[i][0]), 2));
+                        var temp = is_Celsius? parseFloat(temp_data[i][0].toFixed(2)): parseFloat(convertToF(parseFloat(temp_data[i][0]), 2));
+                        chart_data[local_hour] = temp;
+						average_temp += temp;
 					}
-					average_temp = (average_temp/count).toFixed(2);
-					console.log(average_temp);
-					$("#averagetemp").text(average_temp.toString()+"℉");
-					drawcontainerchart('#container2',day,temp_data,getDay(),'Time(hour)',
-						'Temperature(℉)','average temperature');
+                    console.log('avg total: ' + average_temp);
+					average_temp = (average_temp/temp_data.length).toFixed(2);
+                    console.log('avg: ' + average_temp);
+					$("#averagetemp").text(average_temp.toString()+ temp_unit);
+					drawcontainerchart('#container2',day,chart_data,getDay(),'Time(hour)',
+						'Temperature(' + temp_unit + ')','average temperature');
 				}
 			});
 			socket.on('my gas', function (msg) {
 				console.log("gas");
 				var num = msg.data;
+                //console.log(num);
 				if(num.length==0)
 				{
 					var content = "<div style='text-align:center'><label>There is no data today.</label></div>";
@@ -557,7 +663,15 @@ $(function() {
 				}
 				else
 				{
-					drawcontainerchart('#container4',day,num, getDay(),'Time(hour)',
+                    var chart_data = Array.apply(null, Array(hour+1)).map(Number.prototype.valueOf,0);
+                    var local_hour;
+                    for (var i =0;i<num.length;i++) {
+                        local_hour = utc_offset + num[i][1];
+                        if (local_hour < 0)
+                            local_hour += 24;
+                        chart_data[local_hour] = parseFloat(num[i][0].toFixed(2));
+                    }
+					drawcontainerchart('#container4',day,chart_data, getDay(),'Time(hour)',
 					'times','total times');
 					if(num[num.length-1]>0)
 						$("#safestate").text("Unsafe");
@@ -574,9 +688,18 @@ $(function() {
 					var content = "<div style='text-align:center'><label>There is no data today.</label></div>";
 					$("#container3").html(content);
 				}
-				else
-					drawcontainerchart('#container3',day,num,getDay(),'Time(hour)',
-					'times','total times');
+				else {
+                    var chart_data = Array.apply(null, Array(hour+1)).map(Number.prototype.valueOf, 0);
+                    var local_hour;
+                    for (var i = 0; i < num.length; i++) {
+                        local_hour = utc_offset + num[i][1];
+                        if (local_hour < 0)
+                            local_hour += 24;
+                        chart_data[local_hour] = parseFloat(num[i][0].toFixed(2));
+                    }
+                    drawcontainerchart('#container3', day, chart_data, getDay(), 'Time(hour)',
+                        'times', 'total times');
+                }
 			});
 
 			socket.on('my illuminance', function (msg) {
@@ -589,12 +712,16 @@ $(function() {
 				}
 				else
 				{
+                    var chart_data = Array.apply(null, Array(hour+1)).map(Number.prototype.valueOf,0);
+                    var local_hour;
 					for (var i =0;i<light_data.length;i++)
 					{
-						if(light_data[i]!=0)
-							light_data[i] = parseFloat(light_data[i].toFixed(2));
+                        local_hour = utc_offset+light_data[i][1];
+                        if(local_hour < 0)
+                            local_hour += 24;
+                        chart_data[local_hour] = parseFloat(light_data[i][0].toFixed(2));
 					}
-					drawcontainerchart('#container5',day,light_data, getDay(),'Time(hour)',
+					drawcontainerchart('#container5',day,chart_data, getDay(),'Time(hour)',
 						'illuminance(Lumens)','average illuminance');
 				}
 			});
@@ -633,5 +760,6 @@ $(function() {
 
     $('#sh-before').hide();
 	$('#sh-now').show();
+    $.sh.init();
 	$.sh.now.init();
 });

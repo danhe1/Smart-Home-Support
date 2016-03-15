@@ -15,6 +15,7 @@ var speed;
  * woeid: accurate to town of county
  */
 function updateWeather() {
+	console.log("updating weather ...");
 	// located to the MWC conference venus: Fira Gran Via, Barcelona
 	var lat = 41.354804;
 	var lon = 2.128072;
@@ -37,8 +38,17 @@ function updateWeather() {
 	});
 
 	function getWeather(placeWoeid) {
-
-		var weatherUrl = "https://query.yahooapis.com/v1/public/yql?q=select * from weather.forecast where woeid=" + placeWoeid + " and u='f'&format=json";
+		var weatherUrl = "https://query.yahooapis.com/v1/public/yql?q=select * from weather.forecast where woeid=" + placeWoeid;
+        var tz = getCookie('timezone');
+        if(tz.indexOf('America') >= 0 ) {
+            weatherUrl += " and u='f'";
+            $('#temp_unit').html("F");
+        }
+        else {
+            weatherUrl += " and u='c'";
+            $('#temp_unit').html("C");
+        }
+        weatherUrl +=  "&format=json";
 
 		if (weatherUpdated == 0) {
 			$.getJSON(weatherUrl, function(data) {

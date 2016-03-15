@@ -20,8 +20,25 @@ dismiss = function(obj) {
 	$(obj).closest('.mdl-cell').remove();
 };
 
-getTime = function(dt) {
-    return $.format.date(dt, "HH:mm:ss");
+//get local time by the client's timezone
+getLocalDate = function(dt, offset) {
+    //console.log('datetime: ' + dt + ' and tz: ' + offset );
+    //var local = moment(dt).utcOffset(parseInt(offset) * -1).format('HH:mm:ss');
+    var local = moment(dt).clone();
+    local.add(offset * 60, 'minutes');
+    //local = local.format('HH:mm:ss');
+    //console.log('local time: ' + local);
+    return local;
+}
+
+getTime = function(dt, offset) {
+    var date = getLocalDate(dt,offset);
+    return date.format('HH:mm:ss');
+}
+
+getHour = function(dt, offset) {
+    var date = getLocalDate(dt,offset);
+    return date.hour();
 }
 
 function showDialog(options) {
@@ -176,61 +193,48 @@ toggle_status = function(type, obj) {
     //console.log("checked: " + obj.checked);
     var status = obj.checked;
     var status_str = status?'on':'off';
-    showDialog({
-        title: 'Are you sure?',
-        text: 'The fan will turn ' + status_str + '.',
-        negative: {
-            title: 'No'
-        },
-        positive: {
-            title: 'Yes',
-            onClick: function () {
-                console.log('The fan will turn ' + status_str + '.');
-                $.ajax({
-                type: "PUT",
-                url: "/update_sensor",
-                contentType: 'application/json',
-                data: JSON.stringify({
-                    "href": "/a/" + type,
-                    "data": {
-                        "value": status
-                    }
-                }),
-                success: function(data) {
-                    console.log(data);
-                    var ret = data.status;
-                    if(ret) {
-                        console.log("Fan status is updated.");
-                        createSnackbar('Fan status is updated.', 'Dismiss');
-                    }
-                    else {
-                        console.error('failed');
-                        createSnackbar("Server is unavailable for the moment. Try again later.", 'Dismiss');
-                    }
-                }
-                }).done(function() {
-			        //console.log( "second success" );
-                }).fail(function(jqXHR, textStatus, errorThrown){
-                    console.error("Failed to update status " + errorThrown);
-                    createSnackbar("Server error: " + errorThrown, 'Dismiss');
-                });
+    console.log('The fan will turn ' + status_str + '.');
+    $.ajax({
+        type: "PUT",
+        url: "/update_sensor",
+        contentType: 'application/json',
+        data: JSON.stringify({
+            "href": "/a/" + type,
+            "data": {
+                "value": status
             }
-        },
-        cancelable: false
+        }),
+        success: function(data) {
+            console.log(data);
+            var ret = data.status;
+            if(ret) {
+                console.log("Fan status is updated.");
+                createSnackbar('Fan status is updated.', 'Dismiss');
+            }
+            else {
+                console.error('failed');
+                createSnackbar("Server is unavailable for the moment. Try again later.", 'Dismiss');
+            }
+        }
+        }).done(function() {
+            //console.log( "second success" );
+        }).fail(function(jqXHR, textStatus, errorThrown){
+            console.error("Failed to update status " + errorThrown);
+            createSnackbar("Server error: " + errorThrown, 'Dismiss');
     });
     return false;
 }
 
-function convertToC(fTemp) {
+function convertToC(fTemp, frag_digit) {
 	var fTempVal = parseFloat(fTemp);
-	return Math.round((fTempVal - 32) * (5 / 9));
+	return ((fTempVal - 32) * (5 / 9)).toFixed(frag_digit);
 };
 
-function convertToF(cTemp) {
+function convertToF(cTemp, frag_digit) {
 	var cTempVal = parseFloat(cTemp);
 	var fTempVal = (cTempVal * (9 / 5)) + 32;
 	//console.log(fTempVal);
-	return Math.round(fTempVal);
+	return fTempVal.toFixed(frag_digit);
 }
 
 function getDay(){
@@ -419,3 +423,35 @@ draw_billing_pie_chart = function(container, title, data) {
         }]
     });
 }
+
+var createCookie = function(name, value, days) {
+    var expires;
+    if (days) {
+        var date = new Date();
+        date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+        expires = "; expires=" + date.toGMTString();
+    }
+    else {
+        expires = "";
+    }
+    document.cookie = name + "=" + value + expires + "; path=/";
+}
+
+function getCookie(c_name) {
+    if (document.cookie.length > 0) {
+        c_start = document.cookie.indexOf(c_name + "=");
+        if (c_start != -1) {
+            c_start = c_start + c_name.length + 1;
+            c_end = document.cookie.indexOf(";", c_start);
+            if (c_end == -1) {
+                c_end = document.cookie.length;
+            }
+            return unescape(document.cookie.substring(c_start, c_end));
+        }
+    }
+    return "";
+}
+
+var delete_cookie = function(name) {
+    document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+};

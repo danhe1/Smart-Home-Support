@@ -120,13 +120,29 @@ body {
   position: absolute;
   right: 40px;
   top: 100px;
-  z-index: 999;
+  z-index: 3;
 }
 
 .mdl-demo #logo {
   position: absolute;
   right: 32px;
   top: 15px;
+}
+
+/*.mdl-demo #timezone {*/
+  /*position: absolute;*/
+  /*right: 150px;*/
+  /*top: 15px;*/
+/*}*/
+
+/*.mdl-demo #timezone > button {*/
+    /*color: #ffffff;*/
+/*}*/
+
+.mdl-demo #timezone-wrapper {
+    position: absolute;
+    right: 150px;
+    top: 15px;
 }
 
 .mdl-demo .mdl-layout__content section:not(:last-of-type) {
@@ -625,6 +641,16 @@ body {
   padding: 0px;
   min-width: min-content;
 }
+
+/*.mdl-demo .tz-option {*/
+    /*height: 300px;*/
+    /*overflow-y:scroll;*/
+    /*z-index: 99;*/
+/*}*/
+
+/*.mdl-demo .tz-option li {*/
+    /*height: 30px;*/
+/*}*/
 
 
 
