@@ -9,36 +9,34 @@ var iconText;
 var temperature;
 var humidity;
 var speed;
+var lat;
+var lon;
 
 /**
  * get the yahoo weather woeid
  * woeid: accurate to town of county
  */
-function updateWeather() {
-	console.log("updating weather ...");
-	// located to the MWC conference venus: Fira Gran Via, Barcelona
-	var lat = 41.354804;
-	var lon = 2.128072;
-	// position: can put name or lat/lon in place. Use lan&lon makes the request faster.
-	//var position = "Spain Barcelona";
-	var position = "" + lat + "," + lon;
+    function updateWeather() {
+        console.log("updating weather ...");
 
-	var woeid;
-	var myYahooAppID = 'dj0yJmk9dmF1WDVUMlZoaVJ6JmQ9WVdrOWFFRkVOVEJtTkRnbWNHbzlNQS0tJnM9Y29uc3VtZXJzZWNyZXQmeD03ZA--';
-	var woeidUrl = "http://where.yahooapis.com/v1/places.q('" + position + "')?appid=" + myYahooAppID;
-
-	$.getJSON(woeidUrl, function(data) {
-		if (data.error != null) {
-			console.error('WEATHER: Cannot get the woeid');
-		} else {
-			woeid = data.places.place[0].woeid;
-			console.log('WEATHER: woeid -->' + woeid);
-			getWeather(woeid);
-		}
-	});
-
-	function getWeather(placeWoeid) {
-		var weatherUrl = "https://query.yahooapis.com/v1/public/yql?q=select * from weather.forecast where woeid=" + placeWoeid;
+        //var myYahooAppID = 'dj0yJmk9dmF1WDVUMlZoaVJ6JmQ9WVdrOWFFRkVOVEJtTkRnbWNHbzlNQS0tJnM9Y29uc3VtZXJzZWNyZXQmeD03ZA--';
+        //var woeidUrl = "http://where.yahooapis.com/v1/places.q('" + position + "')?appid=" + myYahooAppID;
+        //
+        $.getJSON('/get_geo_location', function(data) {
+            if (data.error != null) {
+                console.error('WEATHER: Cannot get the current geo location.');
+            } else {
+                lat = data.geo.latitude;
+                lon = data.geo.longitude;
+                var position = "(" + lat + "," + lon + ")";
+                getWeather(position);
+            }
+        });
+	function getWeather(position) {
+		//var weatherUrl = "https://query.yahooapis.com/v1/public/yql?q=select * from weather.forecast where woeid=" + placeWoeid;
+        //todo: use oauth 1.0
+        var weatherUrl = "https://query.yahooapis.com/v1/public/yql?q=select * from weather.forecast " +
+            "where woeid in (SELECT woeid FROM geo.places(1) WHERE text='" + position + "')";
         var tz = getCookie('timezone');
         if(tz.indexOf('America') >= 0 ) {
             weatherUrl += " and u='f'";
@@ -49,14 +47,20 @@ function updateWeather() {
             $('#temp_unit').html("C");
         }
         weatherUrl +=  "&format=json";
-
+        console.log(weatherUrl);
 		if (weatherUpdated == 0) {
 			$.getJSON(weatherUrl, function(data) {
 				var count = data.query.count;
 				if(count == 1){
 					iconCode = data.query.results.channel.item.condition.code;
 					iconText = data.query.results.channel.item.condition.text;
-					temperature = data.query.results.channel.item.condition.temp + '°';
+                    if(data.query.results.channel.units.temperature != $('#temp_unit').html())
+                        if(data.query.results.channel.units.temperature == 'F')
+                            temperature = convertToC(data.query.results.channel.item.condition.temp) + '°';
+                        else
+                            temperature = convertToF(data.query.results.channel.item.condition.temp) + '°';
+                    else
+                        temperature = data.query.results.channel.item.condition.temp + '°';
 					humidity = data.query.results.channel.atmosphere.humidity + '%';
 					speed = (data.query.results.channel.wind.speed) + 'mph';
 
@@ -71,22 +75,19 @@ function updateWeather() {
 				checkUpdateWeatherStatus();
 			});
 		}
-	}
+    }
 }
 
-function checkUpdateWeatherStatus() {
+    function checkUpdateWeatherStatus() {
 
-	if (weatherUpdated == 1) {
-		console.log('WEATHER: get yahoo weather forecast successfully.');
-		checkTimes = 0;
-	} else {
-		checkTimes++;
-		console.error('WEATHER: ' + checkTimes + ' times failed to get yahoo weather forecast.');
-		if (checkTimes < tryTimes) {
-			updateWeather();
-		}
-	}
-}
-
-//// update weather every 1 hour
-//setInterval(updateWeather(), 3600*1000);
+        if (weatherUpdated == 1) {
+            console.log('WEATHER: get yahoo weather forecast successfully.');
+            checkTimes = 0;
+        } else {
+            checkTimes++;
+            console.error('WEATHER: ' + checkTimes + ' times failed to get yahoo weather forecast.');
+            if (checkTimes < tryTimes) {
+                updateWeather();
+            }
+        }
+    }

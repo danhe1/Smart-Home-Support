@@ -97,6 +97,21 @@ $(function() {
 	var yearSumGrid = sumEnergy(yearGrid);
 	var yearBilling = getData(yearSumGrid, 0.15);
 
+	var timezone = null;
+    var utc_offset = null;
+
+	function getTimezone() {
+        var tz = getCookie('timezone');
+        var zones = moment.tz.names();
+        if(zones.indexOf(tz) > 0) {
+            console.log('get timezone in cookie: ' + tz);
+            timezone = tz;
+            utc_offset = moment.tz(timezone).utcOffset() / 60;
+            return true;
+        }
+        else return false;
+    };
+
     $.energy = {};
 	$.energy.house = {
 		register_actions: function(){
@@ -196,5 +211,14 @@ $(function() {
             $.energy.house.update_billing("#tab1");
 		}
 	}
+
+	if(getTimezone()) {
+		setInterval(function () {
+            console.log("Updating datetime for welcome cards");
+			updateWelcomeCardsDateTime(utc_offset);
+		}, 60 * 1000);
+		updateWelcomeCardsDateTime(utc_offset);
+	}
 	$.energy.house.init(0);
+
 });

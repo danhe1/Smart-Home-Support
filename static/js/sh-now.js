@@ -12,6 +12,10 @@ $(function() {
 	window.panel;
 	window.panel=0;
 
+    //(HeDan)
+    //Number of alert cards displayed on NOW page
+    var alert_card_number = 0;
+
 	var now_timer;
 	var time_timer;
     var weather_timer;
@@ -33,6 +37,25 @@ $(function() {
                 console.log('set timezone in cookie: ' + getCookie('timezone'));
             }
             makeTimezoneSelect();
+
+            $("span.mdl-layout-title").click(function() {
+                $.getJSON('/cf_instance', function(data) {
+                        if (data.error != null) {
+                            console.error('Cannot get the cf instance id.');
+                        } else {
+                            var inst = data.cf_instance;
+                            //console.log(inst);
+                            showDialog({
+                                title: 'TAP Instance',
+                                text: 'The app is currently running on instance index: ' + inst.index + ' .',
+                                positive: {
+                                    title: 'OK',
+                                },
+                                cancelable: true
+                            });
+                        }
+                });
+            });
         }
     };
 
@@ -150,14 +173,24 @@ $(function() {
 					</div>\
 				  </div>\
 				  <div class="mdl-card__actions mdl-card--border">\
-					<a class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect" style="color: #000" onclick="dismiss(this);">\
+					<a class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect" style="color: #000" onclick="$.sh.now.dismiss_alert_card(this);">\
 					  DISMISS\
 					</a>\
 					<a class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect" style="color: #000">SET TIMER</a>\
 				  </div>\
-				</div>', time))
+				</div>', time));
+                alert_card_number++;
 			}
 		},
+        dismiss_alert_card: function(obj){
+            dismiss(obj);
+            alert_card_number--;
+            console.log("number of alert cards " + alert_card_number);
+            if(alert_card_number <= 0)
+            {
+                $("#quiet_alert_card").show();
+            }
+        },
 		update_motion_alert: function(time){
 			if($(".mdl-card__title h6:contains('MOTION SENSOR')").length > 0){
 				//find motion card and update time
@@ -178,11 +211,12 @@ $(function() {
 					</div>\
 				  </div>\
 				  <div class="mdl-card__actions mdl-card--border">\
-					<a class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect" onclick="dismiss(this);">\
+					<a class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect" onclick="$.sh.now.dismiss_alert_card(this);">\
 					  DISMISS\
 					</a>\
 				  </div>\
-				</div>', time))
+				</div>', time));
+                alert_card_number++;
 			}
 		},
 		update_gas_alert: function(time){
@@ -207,12 +241,13 @@ $(function() {
 					</div>\
 				  </div>\
 				  <div class="mdl-card__actions mdl-card--border">\
-					<a class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect" onclick="dismiss(this);"  style="color: #fff;">\
+					<a class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect" onclick="$.sh.now.dismiss_alert_card(this);"  style="color: #fff;">\
 					  DISMISS\
 					</a>\
 					<a class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect"  style="color: #fff;">EMERGENCY</a>\
 				  </div>\
 				</div>', time));
+                alert_card_number++;
 			}
 		},
 		update_buzzer_alert: function(time) {
@@ -236,11 +271,12 @@ $(function() {
 					</div>\
 				  </div>\
 				  <div class="mdl-card__actions mdl-card--border">\
-					<a class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect" onclick="return dismiss(this);">\
+					<a class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect" onclick="$.sh.now.dismiss_alert_card(this);">\
 					  DISMISS\
 					</a>\
 				  </div>\
-				</div>', time))
+				</div>', time));
+                alert_card_number++;
 			}
 		},
 		update_status: function(type, status) {
@@ -298,9 +334,14 @@ $(function() {
 
 		},
 		update_sensor_data: function(title, value) {
-			var html = '';
-			if(title == 'AMBIENT LIGHT')
-				html = String.format('<div class="sensor-card mdl-card mdl-cell mdl-shadow--2dp mdl-cell--3-col">\
+			//var html = '';
+            var unit = '';
+            if(title == 'AMBIENT LIGHT')
+                unit = 'lm';
+            else if (title == 'CURRENT ENERGY CONSUMPTION')
+                unit = 'Watt';
+			//if(title == 'AMBIENT LIGHT')
+			var	html = String.format('<div class="sensor-card mdl-card mdl-cell mdl-shadow--2dp mdl-cell--3-col">\
                     <div class="mdl-card__title mdl-card--expand">\
 			  	        <h6>{0}</h6>\
                     </div>\
@@ -309,21 +350,21 @@ $(function() {
                             <h1>{1}</h1>\
                         </div>\
                         <div class="mdl-cell" style="display: flex; align-items: flex-end;">\
-								<h6 style="padding: 5px;">lm</h6>\
+								<h6 style="padding: 5px;">{2}</h6>\
                         </div>\
                     </div>\
-                </div>',title, value);
-			else
-				html = String.format('<div class="sensor-card mdl-card mdl-cell mdl-shadow--2dp mdl-cell--3-col">\
-                    <div class="mdl-card__title mdl-card--expand">\
-			  	        <h6>{0}</h6>\
-                    </div>\
-                    <div class="mdl-card__supporting-text mdl-grid mdl-grid--no-spacing">\
-                        <div class="mdl-cell mdl-cell--10-col" style="text-align: left">\
-                            <h1>{1}</h1>\
-                        </div>\
-                    </div>\
-                </div>', title, value);
+                </div>',title, value, unit);
+			//else
+			//	html = String.format('<div class="sensor-card mdl-card mdl-cell mdl-shadow--2dp mdl-cell--3-col">\
+             //       <div class="mdl-card__title mdl-card--expand">\
+			//  	        <h6>{0}</h6>\
+             //       </div>\
+             //       <div class="mdl-card__supporting-text mdl-grid mdl-grid--no-spacing">\
+             //           <div class="mdl-cell mdl-cell--10-col" style="text-align: left">\
+             //               <h1>{1}</h1>\
+             //           </div>\
+             //       </div>\
+             //   </div>', title, value);
 
 			$("#data-container").append(html);
 		},
@@ -364,6 +405,8 @@ $(function() {
                             default:
                                 console.error("Unknown alert sensor type: " + key);
                         }
+                        console.log("number of alert cards " + alert_card_number);
+                        if(alert_card_number == 1)$("#quiet_alert_card").hide();
                     });
                     $.each(sensors['status'], function (key, value) {
                         switch (key) {
@@ -402,6 +445,9 @@ $(function() {
                                 break;
                             case 'illuminance':
                                 $.sh.now.update_sensor_data('AMBIENT LIGHT', value);
+                                break;
+                            case 'power':
+                                $.sh.now.update_sensor_data('CURRENT ENERGY CONSUMPTION', value/1000);
                                 break;
                             default:
                                 console.error("Unknown sensor data type: " + key);
@@ -563,13 +609,17 @@ $(function() {
     	},
     	sendrequest: function () {
 			if(window.panel != 2) return;
-            var now = moment();
+            //var converted = moment.tz(moment(), timezone).format("YYYY-MM-DD");
+            //console.log("timezone today: " + moment.tz(moment(), timezone).format());
 			var full_format = "YYYY-MM-DD HH:mm:ss";
-            var start = now.format("YYYY-MM-DD") + " 00:00:00";
-            var end = now.format("YYYY-MM-DD") + " 23:59:59";
-			var utc_start_time = moment(start).utc().format(full_format);
-            var utc_end_time = moment(end).utc().format(full_format);
-            console.log("start and end: " + start + " " + end);
+            // for the current day
+            var utc_start_time = moment.tz(timezone).startOf('day').utc().format(full_format);;
+            var utc_end_time = moment.tz(timezone).endOf('day').utc().format(full_format);;
+            //var start = converted + " 00:00:00";
+            //var end = converted + " 23:59:59";
+            //var utc_start_time = moment(start).add(utc_offset * -1, 'hours').format(full_format);
+            //var utc_end_time = moment(end).add(utc_offset * -1, 'hours').format(full_format);
+            //console.log("start and end: " + start + " " + end);
             console.log("utc start and end: " + utc_start_time + " " + utc_end_time);
 			window.socket.emit('my data', {data: "temperature", date: [utc_start_time, utc_end_time]});
 			window.socket.emit('my data', {data: "gas", date: [utc_start_time, utc_end_time]});
@@ -638,6 +688,8 @@ $(function() {
                         local_hour = utc_offset+temp_data[i][1];
                         if(local_hour < 0)
                             local_hour += 24;
+                        else if (local_hour > 24)
+                            local_hour -= 24;
                         //console.log('local hour: ' + local_hour);
                         console.log("is: " + is_Celsius + " c: " + parseFloat(temp_data[i][0].toFixed(2)) + " f:" + convertToF(parseFloat(temp_data[i][0]), 2));
                         var temp = is_Celsius? parseFloat(temp_data[i][0].toFixed(2)): parseFloat(convertToF(parseFloat(temp_data[i][0]), 2));
@@ -669,6 +721,8 @@ $(function() {
                         local_hour = utc_offset + num[i][1];
                         if (local_hour < 0)
                             local_hour += 24;
+                        else if (local_hour > 24)
+                            local_hour -= 24;
                         chart_data[local_hour] = parseFloat(num[i][0].toFixed(2));
                     }
 					drawcontainerchart('#container4',day,chart_data, getDay(),'Time(hour)',
@@ -695,6 +749,8 @@ $(function() {
                         local_hour = utc_offset + num[i][1];
                         if (local_hour < 0)
                             local_hour += 24;
+                        else if (local_hour > 24)
+                            local_hour -= 24;
                         chart_data[local_hour] = parseFloat(num[i][0].toFixed(2));
                     }
                     drawcontainerchart('#container3', day, chart_data, getDay(), 'Time(hour)',
@@ -719,6 +775,8 @@ $(function() {
                         local_hour = utc_offset+light_data[i][1];
                         if(local_hour < 0)
                             local_hour += 24;
+                        else if (local_hour > 24)
+                            local_hour -= 24;
                         chart_data[local_hour] = parseFloat(light_data[i][0].toFixed(2));
 					}
 					drawcontainerchart('#container5',day,chart_data, getDay(),'Time(hour)',
@@ -758,8 +816,13 @@ $(function() {
 		$.sh.before.init();
 	});
 
+    setInterval(function(){
+        updateWelcomeCardsDateTime(utc_offset);
+    }, 60 * 1000);
+
     $('#sh-before').hide();
-	$('#sh-now').show();
+    $('#sh-now').show();
     $.sh.init();
-	$.sh.now.init();
+    $.sh.now.init();
+    updateWelcomeCardsDateTime(utc_offset);
 });

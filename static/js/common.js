@@ -2,6 +2,7 @@
  * Created by xshan1 on 2/4/2016.
  */
 var week = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+//var weekLong = ['Sunday','Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 var month = ['4th', '8th', '12th', '16th', '20th', '24th', '28th'];
 var year = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 //string format function
@@ -34,6 +35,26 @@ getLocalDate = function(dt, offset) {
 getTime = function(dt, offset) {
     var date = getLocalDate(dt,offset);
     return date.format('HH:mm:ss');
+}
+
+getHourMinute = function(dt, offset) {
+    var date = getLocalDate(dt,offset);
+    return date.format('HH:mm');
+}
+
+getFormattedDateString = function(dt, offset){
+    var date = getLocalDate(dt,offset);
+    var weekday = date.format('dddd');
+    var month = date.format('MMMM');
+    var day = date.format('D');
+    var year = date.format('YYYY')
+
+    if(day == '1' || day == '21' || day == '31') day += 'st';
+    else if(day == '2' || day == '22') day += 'nd';
+    else if(day == '3' || day == '23') day += 'rd';
+    else day += 'th';
+
+    return weekday + " " + day + " " + month + " " + year;
 }
 
 getHour = function(dt, offset) {
@@ -455,3 +476,21 @@ function getCookie(c_name) {
 var delete_cookie = function(name) {
     document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:01 GMT;';
 };
+
+updateWelcomeCardsDateTime  = function(utc_offset)
+    {
+        var utc_time = moment.utc();
+        //console.log(utc_time.format());
+        var datestr = getFormattedDateString(utc_time, utc_offset);
+        var timestr = getHourMinute(utc_time, utc_offset);
+        //console.log(datestr);
+
+        $("div.demo-card-date").each(function(index){
+            //console.log("Updating date area of welcome card");
+            $(this).html("<h6 style=\"color: #fff;\">"+datestr+"</h6>");
+        });
+        $("div.demo-card-time").each(function(index){
+            //console.log("Updating date area of welcome card");
+            $(this).html("<h2 style=\"color: #fff;\">"+timestr+"</h2>");
+        });
+    };
