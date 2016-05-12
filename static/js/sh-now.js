@@ -38,21 +38,33 @@ $(function() {
             }
             makeTimezoneSelect();
 
-            $("span.mdl-layout-title").click(function() {
+            $("#inst").on('click mouseover', function() {
                 $.getJSON('/cf_instance', function(data) {
                         if (data.error != null) {
-                            console.error('Cannot get the cf instance id.');
+                            console.error('Cannot get the cf instance info.');
                         } else {
                             var inst = data.cf_instance;
-                            //console.log(inst);
-                            showDialog({
-                                title: 'TAP Instance',
-                                text: 'The app is currently running on instance index: ' + inst.index + ' .',
-                                positive: {
-                                    title: 'OK',
-                                },
-                                cancelable: true
-                            });
+                            if($.isEmptyObject(inst))
+                                $("#instance_info").html('n/a');
+                            else
+                            {
+                                var info = String.format('<div>Name <span>{0}</span></div><div style="word-break:break-all;">URL <a>{1}</a></div> \
+                                    <table><tbody> \
+                                    <tr><td>Instance ID</td><td style="word-break:break-all; width: 145px">{2}</td></tr> \
+                                    <tr><td>Version</td><td>{3}</td></tr> \
+                                    <tr><td>Index</td><td>{4}</td></tr> \
+                                    <tr><td>Instance running</td><td>{5}</td></tr> \
+                                    </tbody></table>', inst.name, inst.uris[0], inst.instance_id, inst.version, inst.Instance, inst.Total);
+                                $("#instance_info").html(info);
+                            }
+                            $("#instance_info").show();
+
+                            // to fix the wrong margin offset for the first time issue
+                            var left_offset = $("#instance_info").css('margin-left');
+                            if(left_offset == "0px") {
+                                var tip = $("#instance_info");
+                                $("#instance_info").css('margin-left', -1 * tip.width() + 'px');
+                            }
                         }
                 });
             });
@@ -188,7 +200,8 @@ $(function() {
             console.log("number of alert cards " + alert_card_number);
             if(alert_card_number <= 0)
             {
-                $("#quiet_alert_card").show();
+                $("#alert-status-title-quiet").show();
+                $("#alert-status-title-alerts").hide();
             }
         },
 		update_motion_alert: function(time){
@@ -406,7 +419,11 @@ $(function() {
                                 console.error("Unknown alert sensor type: " + key);
                         }
                         console.log("number of alert cards " + alert_card_number);
-                        if(alert_card_number == 1)$("#quiet_alert_card").hide();
+                        if(alert_card_number == 1)
+                        {
+                            $("#alert-status-title-quiet").hide();
+                            $("#alert-status-title-alerts").show();
+                        }
                     });
                     $.each(sensors['status'], function (key, value) {
                         switch (key) {
@@ -474,6 +491,10 @@ $(function() {
 		init: function() {
 			console.log("init now page.");
 			window.panel = 1;
+            $('#sh-before').hide();
+            $('#sh-now').show();
+            $('#alert-status-card').show();
+            $("#demo-welcome-message").html("This demo tells you what is <b>happening in your home right now.</b>");
 			$.sh.now.update_portal();
 			$.sh.now.register_actions();
             $.sh.now.update_billing();
@@ -788,7 +809,11 @@ $(function() {
     	},
 		init: function() {
 			console.log("init before page.");
+            $("#demo-welcome-message").html("This demo tells you about your <b>home sensor history.</b>");
 			window.panel = 2;
+            $('#sh-before').show();
+		    $('#sh-now').hide();
+            $('#alert-status-card').hide();
 			//window.trigger("resize");
 			$.sh.before.register_actions();
 			$.sh.before.loading();
@@ -803,16 +828,12 @@ $(function() {
         clearInterval(now_timer);
         clearInterval(weather_timer);
 		//clearInterval(chart_timer);
-		$('#sh-before').hide();
-		$('#sh-now').show();
 		$.sh.now.init();
 	});
 	$("a:contains('BEFORE')").on('click', function() {
      	clearInterval(time_timer);
 		clearInterval(now_timer);
         clearInterval(weather_timer);
-		$('#sh-now').hide();
-		$('#sh-before').show();
 		$.sh.before.init();
 	});
 
@@ -820,8 +841,7 @@ $(function() {
         updateWelcomeCardsDateTime(utc_offset);
     }, 60 * 1000);
 
-    $('#sh-before').hide();
-    $('#sh-now').show();
+
     $.sh.init();
     $.sh.now.init();
     updateWelcomeCardsDateTime(utc_offset);

@@ -64,7 +64,11 @@ var lon;
 					humidity = data.query.results.channel.atmosphere.humidity + '%';
 					speed = (data.query.results.channel.wind.speed) + 'mph';
 
-					$('#weather-icon').attr('src', 'http://l.yimg.com/a/i/us/we/52/' + iconCode + '.gif');
+                    var orig_src = $('#weather-icon').attr('src');
+                    var pdir = orig_src.lastIndexOf('/');
+                    var new_src = orig_src.substr(0, pdir+1) + iconCode  +  '.png';
+
+					$('#weather-icon').attr('src', new_src);
 					$('#weather-icon').attr('title', iconText);
 					$('#weather > h1').html(temperature);
 					$('#humidity').html(humidity);

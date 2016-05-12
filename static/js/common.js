@@ -44,17 +44,17 @@ getHourMinute = function(dt, offset) {
 
 getFormattedDateString = function(dt, offset){
     var date = getLocalDate(dt,offset);
-    var weekday = date.format('dddd');
-    var month = date.format('MMMM');
+    var weekday = date.format('dddd').toUpperCase();
+    var month = date.format('MMMM').toUpperCase();
     var day = date.format('D');
     var year = date.format('YYYY')
 
-    if(day == '1' || day == '21' || day == '31') day += 'st';
-    else if(day == '2' || day == '22') day += 'nd';
-    else if(day == '3' || day == '23') day += 'rd';
-    else day += 'th';
+    //if(day == '1' || day == '21' || day == '31') day += 'st';
+    //else if(day == '2' || day == '22') day += 'nd';
+    //else if(day == '3' || day == '23') day += 'rd';
+    //else day += 'th';
 
-    return weekday + " " + day + " " + month + " " + year;
+    return weekday + " " + month + " " + day + ", " + year;
 }
 
 getHour = function(dt, offset) {
@@ -487,10 +487,10 @@ updateWelcomeCardsDateTime  = function(utc_offset)
 
         $("div.demo-card-date").each(function(index){
             //console.log("Updating date area of welcome card");
-            $(this).html("<h6 style=\"color: #fff;\">"+datestr+"</h6>");
+            $(this).html("<h6>"+datestr+"</h6>");
         });
         $("div.demo-card-time").each(function(index){
             //console.log("Updating date area of welcome card");
-            $(this).html("<h2 style=\"color: #fff;\">"+timestr+"</h2>");
+            $(this).html("<h5>"+timestr+"</h5>");
         });
     };

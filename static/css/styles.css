@@ -110,7 +110,7 @@ body {
 }
 .mdl-demo .mdl-card__actions a:hover,
 .mdl-demo .mdl-card__actions a:active {
-  color: inherit;
+  color: #000000;
   background-color: transparent;
 }
 .mdl-demo .mdl-card__supporting-text + .mdl-card__actions {
@@ -118,14 +118,14 @@ body {
 }
 .mdl-demo #logout {
   position: absolute;
-  right: 40px;
-  top: 100px;
+  right: 50px;
+  top: 90px;
   z-index: 3;
 }
 
 .mdl-demo #logo {
   position: absolute;
-  right: 32px;
+  right: 42px;
   top: 15px;
 }
 
@@ -436,6 +436,11 @@ body {
     margin-bottom:0px !important;
 }
 
+.sensor-card > .mdl-card__supporting-text > .mdl-cell > h6,
+.status-card > .mdl-card__supporting-text > .mdl-cell > h6 {
+    color: #455a64;
+}
+
 #status-container {
     width: calc(25% - 16px);
 }
@@ -445,7 +450,8 @@ body {
     height: 180px !important;
 }
 
-.sensor-card  .mdl-card__title h6 {
+.sensor-card  .mdl-card__title h6
+{
     font-weight: 500;
     color: #000;
     margin-top: 0px;
@@ -654,14 +660,76 @@ body {
   min-height: 120px;
 }
 
-.demo-card-date > h6
-{
-    margin: 3% 0 3% 0;
+.demo-card-date {
+    margin: 3% 0 2px 0;
 }
 
-.demo-card-time > h2 {
-    margin: 1% 0 1% 0;
+.demo-card-date  h6 {
+    margin-bottom: 0px;
 }
+
+.demo-card-time > h5 {
+    margin: 2px 0 3% 0;
+    font-weight: 600;
+}
+
+/* Rules for sizing the icon. */
+.material-icons.md-18 { font-size: 18px; }
+.material-icons.md-24 { font-size: 24px; }
+.material-icons.md-36 { font-size: 36px; }
+.material-icons.md-48 { font-size: 48px; }
+
+/* Rules for using icons as black on a light background. */
+.material-icons.md-dark { color: rgba(0, 0, 0, 0.54); }
+.material-icons.md-dark.md-inactive { color: rgba(0, 0, 0, 0.26); }
+
+/* Rules for using icons as white on a dark background. */
+.material-icons.md-light { color: rgba(255, 255, 255, 1); }
+.material-icons.md-light.md-inactive { color: rgba(255, 255, 255, 0.3); }
+
+.vertical-divider {
+  border-top-width: 0;
+  border-right-width: 1px;
+  border-right-style: solid;
+  height: 100%;
+}
+
+#instance_info {
+    background: #242a2b;
+    text-align: left;
+    max-width: 300px;
+}
+
+#instance_info div {
+    padding-bottom: 10px;
+    padding-left: 2px;
+}
+
+#instance_info div span {
+    color:#00e676;
+}
+
+#instance_info table {
+    table-layout:fixed;
+    max-width:300px;
+    border-collapse:collapse;
+}
+
+#instance_info table tr td:first-child,
+#instance_info table tr td:last-child
+{
+    border-top: 1px solid #eeeeee;
+    border-bottom: 1px solid #eeeeee;
+    border-color: #8d8f90;
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+
+#instance_info table tr td:first-child {
+    font-weight: 100;
+    color: #8d8f90;
+}
+
 
 
 
